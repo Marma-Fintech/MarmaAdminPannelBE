@@ -1,0 +1,27 @@
+{
+  "name": "marmaadminpanel",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "celebrate": "^15.0.3",
+    "cloudinary": "^1.21.0",
+    "dotenv": "^16.4.5",
+    "error": "^10.4.0",
+    "express": "^4.21.1",
+    "joi": "^17.13.3",
+    "logger": "^0.0.1",
+    "mongoose": "^8.7.3",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemon": "^3.1.7",
+    "segments": "^1.0.1"
+  },
+  "description": ""
+}
