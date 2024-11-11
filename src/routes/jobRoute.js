@@ -9,18 +9,14 @@ const {
 const { celebrate, Joi, Segments, errors } = require('celebrate')
 const router = express.Router()
 
-// Validation schema for creating a job
-const jobValidation = {
+router.post('/jobs',   celebrate({
   [Segments.BODY]: Joi.object().keys({
     jobTitle: Joi.string().required(),
     jobDescription: Joi.string().required(),
     jobCategory: Joi.string().required(),
     jobType: Joi.string().required() // Accepts any string value
   })
-}
-
-// POST route for creating a job
-router.post('/jobs', celebrate(jobValidation), createJob)
+}), createJob)
 
 router.get('/jobs/getalljobs', getAllJobs)
 

@@ -7,8 +7,8 @@ require('dotenv').config()
 const app = express()
 const port = process.env.PORT || 7001
 
-// Only apply express.json() on non-upload routes if needed
-app.use(express.urlencoded({ extended: true })) // For form-data bodies
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.get('/', (req, res) => {
   res.json('Server running')
