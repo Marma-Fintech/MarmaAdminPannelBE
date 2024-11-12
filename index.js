@@ -1,37 +1,51 @@
-const express = require('express')
-const mongoose = require('mongoose')
-const router = require('./src/routes/allroutes')
-const morgan = require('morgan')
-require('dotenv').config()
+const express = require('express');
+const mongoose = require('mongoose');
+const router = require('./src/routes/allroutes');
+const morgan = require('morgan');
+const cors = require('cors');
+require('dotenv').config();
 
-const app = express()
-const port = process.env.PORT || 7001
+const app = express();
+const port = process.env.PORT || 7001;
 
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+// Middleware setup
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
 
+// Logging with Morgan (place before routes)
+app.use(morgan(':method :url :status'));
+
+// Base route
 app.get('/', (req, res) => {
-  res.json('Server running')
-})
+  res.json('Server running');
+});
 
 // Connect to MongoDB
 mongoose
   .connect(process.env.DBURL, {
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000
+    serverSelectionTimeoutMS: 5000,
   })
   .then(() => {
-    console.log('Successfully Connected to MongoDB')
+    console.log('Successfully Connected to MongoDB');
   })
-  .catch(err => {
-    console.error('MongoDB Connection Failure', err)
-  })
+  .catch((err) => {
+    console.error('MongoDB Connection Failure', err);
+    process.exit(1); // Exit process if unable to connect
+  });
 
-// Morgan for logging
-app.use(morgan(':method :url :status'))
+// Routes
+app.use(router);
 
-app.use(router)
+// Error-handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'An error occurred', error: err.message });
+});
 
+// Start server
 app.listen(port, () => {
-  console.log(`Server running on ${port}`)
-})
+  console.log(`Server running on port ${port}`);
+});
+
