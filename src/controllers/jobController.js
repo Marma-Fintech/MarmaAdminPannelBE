@@ -1,4 +1,4 @@
-const Job = require('../models/jobModel') // Ensure the import is correct
+const Job = require('../models/jobModel')
 
 const createJob = async (req, res, next) => {
   try {

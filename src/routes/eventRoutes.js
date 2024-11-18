@@ -1,28 +1,12 @@
 const express = require("express");
 const {
-  postEvent,
   getAllEvents,
   deleteEvent,
-  getUpcomingEvents,
-  getPassedEvents,
+  eventLink,
 } = require("../controllers/eventController");
 const { celebrate, Joi, Segments,errors } = require("celebrate");
-const { upload } = require("../utils/multer");
 const router = express.Router();
 
-router.post(
-  "/event",
-  upload.single("image"), // Use multer to handle file upload
-  celebrate({
-    [Segments.BODY]: Joi.object().keys({
-      title: Joi.string().required(),
-      link: Joi.string().uri().required(),
-      description: Joi.string().required(),
-      date: Joi.date().iso().required(), // Ensure date format (ISO 8601) is required
-    }),
-  }),
-  postEvent
-);
 
 router.get("/event/gettallevent", getAllEvents);
 
@@ -35,9 +19,14 @@ router.delete(
   }),
   deleteEvent
 );
-router.get("/event/upcommingevent", getUpcomingEvents);
 
-router.get("/event/passedevents", getPassedEvents);
+router.post("/eventLink", celebrate({
+  [Segments.BODY]: Joi.object().keys({
+    link: Joi.string().uri().required()
+  })
+}),
+eventLink
+);
 
 router.use(errors());
 

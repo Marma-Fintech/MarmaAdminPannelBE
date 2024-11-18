@@ -16,7 +16,7 @@ const jobSchema = new mongoose.Schema({
   jobType: { 
     type: String, 
     required: true 
-  }, // e.g., Full-time, Part-time, Contract
+  },
 }, {
   timestamps: true
 });

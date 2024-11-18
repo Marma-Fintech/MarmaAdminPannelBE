@@ -1,51 +1,15 @@
-const Event = require('../models/eventModel')
+const Event = require('../models/eventModel');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const cloudinary = require('cloudinary').v2;  // Import Cloudinary directly
+require("dotenv").config();
 
-const postEvent = async (req, res, next) => {
-  try {
-    const updateFields = req.body
-    let image
-
-    // Check if req.file is present (uploaded image)
-    if (req.file) {
-      image = req.file.path // Use the path from multer to store in the database
-      updateFields.image = image // Add the image path to the updateFields
-    } 
-    else if (!req.params.id) {
-      // If creating a new event and no image is provided, return an error
-      return res.status(400).json({ message: 'Image is required' })
-    }
-
-    // Convert date to UTC midnight to avoid timezone issues
-    if (updateFields.date) {
-      const date = new Date(updateFields.date)
-      date.setUTCHours(18, 30, 0, 0) // Set time to 00:00 UTC
-      updateFields.date = date
-    }
-
-    const eventId = req.params.id
-
-    // Check if an event with the given ID exists
-    let updatedEvent = await Event.findById(eventId)
-
-    if (updatedEvent) {
-      // If the event exists, update it
-      updatedEvent = await Event.findByIdAndUpdate(eventId, updateFields, {
-        new: true, // Return the updated document
-        runValidators: true // Ensure that the update respects schema validations
-      })
-    } else {
-      // If the event doesn't exist, create a new one with the provided data
-      updatedEvent = await Event.create(updateFields)
-    }
-
-    // Respond with the created or updated event
-    res
-      .status(200)
-      .json({ message: 'Event created successfully', event: updatedEvent })
-  } catch (err) {
-    next(err) // Pass the error to the error handling middleware
-  }
-}
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET,
+});
 
 const getAllEvents = async (req, res, next) => {
   try {
@@ -74,32 +38,71 @@ const deleteEvent = async (req, res, next) => {
   }
 }
 
-const getUpcomingEvents = async (req, res, next) => {
-  try {
-    const upcomingEvents = await Event.find({
-      date: { $gte: new Date() }
-    }).sort({ date: 1 })
-    res.status(200).json(upcomingEvents)
-  } catch (err) {
-    next(err)
-  }
-}
+const eventLink = async (req, res, next) => {
+  const { link } = req.body;
 
-const getPassedEvents = async (req, res, next) => {
+  if (!link) {
+    return res.status(400).json({ error: 'link is required' });
+  }
+
   try {
-    const passedEvents = await Event.find({ date: { $lt: new Date() } }).sort({
-      date: -1
-    })
-    res.status(200).json(passedEvents)
+    // Check if the link already exists in the Event collection
+    const existingEvent = await Event.findOne({ link });
+
+    if (existingEvent) {
+      return res.status(400).json({ error: 'Event with this link already exists' });
+    }
+
+    // Fetch the HTML content of the link
+    const response = await axios.get(link);
+    const html = response.data;
+
+    // Load the HTML into cheerio
+    const $ = cheerio.load(html);
+
+    // Extract metadata
+    const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'No title';
+    let description = $('meta[property="og:description"]').attr('content') ||
+                      $('meta[name="description"]').attr('content') ||
+                      $('meta[property="twitter:description"]').attr('content') ||
+                      'No description';
+                      
+    // If description is still too short or missing, extract more text from the body
+    if (description.length < 100) { // You can adjust the length threshold
+      description = $('body').text().slice(0, 1000).trim(); // Extract more text, up to 1000 characters
+    }
+
+    const image = $('meta[property="og:image"]').attr('content') || null;
+
+    let cloudinaryImageUrl = null;
+
+    // Upload image to Cloudinary if an image URL exists
+    if (image) {
+      const uploadResponse = await cloudinary.uploader.upload(image, {
+        folder: "marmaAdminPanel",
+        resource_type: "image",
+      });
+      cloudinaryImageUrl = uploadResponse.secure_url;
+    }
+
+    // Save data to MongoDB
+    const newEvent = new Event({
+      title,
+      description,
+      image: cloudinaryImageUrl || '',
+      link: link
+    });
+    await newEvent.save();
+
+    // Send response with saved data
+    res.status(201).json(newEvent);
   } catch (err) {
     next(err)
   }
-}
+};
 
 module.exports = {
-  postEvent,
   deleteEvent,
   getAllEvents,
-  getUpcomingEvents,
-  getPassedEvents
+  eventLink
 }

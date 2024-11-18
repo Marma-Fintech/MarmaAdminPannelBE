@@ -58,8 +58,9 @@ const applyForJob = async (req, res, next) => {
 
     // Email to the admin with user's details
     const adminMailOptions = {
-      from: email, // Use the user's email as the sender
+      from: `"${name} <${email}>" <${process.env.ADMIN_EMAIL}>`, // Display user's name and email with the admin's email as the sender
       to: process.env.ADMIN_EMAIL, // Admin email as the recipient
+      replyTo: email, // Ensures replies go directly to the user's email
       subject: `New Job Application - ${applyingDesignation}`,
       text: `A new application has been received:\n\nName: ${name}\nEmail: ${email}\nApplying for: ${applyingDesignation}\nExperience: ${experience}\nNotice Period: ${noticeperiod}\nCurrent Salary: ${currentsalary}\nExpected Salary: ${expectedsalary}\nPortfolio Link: ${
         Portfoliolink || ''
@@ -83,40 +84,43 @@ const applyForJob = async (req, res, next) => {
 
 const getAllJobApplications = async (req, res, next) => {
   try {
-    const applications = await JobApplication.find()
-    res.status(200).json(applications)
-  } catch (error) {
-    next(error)
-  }
-}
+    const { page = 1, sort = 'asc', applyingDesignation } = req.query;
 
-const getJobApplicationsByRole = async (req, res, next) => {
-  const applyingDesignation = req.params.role
+    // Set default limit
+    const limit = 2;
 
-  try {
-    // Find job applications with a case-insensitive partial match for applyingDesignation
-    const applications = await JobApplication.find({
-      applyingDesignation: { $regex: applyingDesignation, $options: 'i' } // Partial, case-insensitive match
-    })
+    // Parse the page number
+    const pageNumber = parseInt(page, 10) || 1;
 
-    if (applications.length === 0) {
-      return res
-        .status(404)
-        .json({ message: 'No job applications found for this role' })
+    // Build the query object for filtering
+    const query = {};
+    if (applyingDesignation) {
+      query.applyingDesignation = new RegExp(`^${applyingDesignation.trim()}`, 'i'); // Case-insensitive match, trims spaces
     }
 
-    res.status(200).json(applications)
-  } catch (error) {
-    next(error)
-    res.status(500).json({
-      message: 'Error fetching job applications',
-      error: error.message
-    })
-  }
-}
+    // Determine sorting order
+    const sortOrder = sort.toLowerCase() === 'desc' ? -1 : 1;
 
+    // Fetch filtered, sorted, and paginated data
+    const applications = await JobApplication.find(query)
+      .sort({ createdAt: sortOrder }) // Adjust 'createdAt' field for sorting
+      .skip((pageNumber - 1) * limit)
+      .limit(limit);
+
+    // Get the total count of applications for pagination metadata
+    const totalApplications = await JobApplication.countDocuments(query);
+
+    res.status(200).json({
+      totalApplications,
+      currentPage: pageNumber,
+      totalPages: Math.ceil(totalApplications / limit),
+      data: applications,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = {
   applyForJob,
   getAllJobApplications,
-  getJobApplicationsByRole
 }

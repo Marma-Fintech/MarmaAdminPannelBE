@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { upload } = require('../utils/multer');
-const { applyForJob, getAllJobApplications, getJobApplicationsByRole } = require('../controllers/jobApplicationController');
+const { applyForJob, getAllJobApplications } = require('../controllers/jobApplicationController');
 const { celebrate, Joi, Segments,errors } = require('celebrate');
 
 router.post(
@@ -23,18 +23,9 @@ router.post(
 );
 
 
+
 router.get('/applications', getAllJobApplications);
 
-
-router.get(
-  '/applications/:role',
-  celebrate({
-    [Segments.PARAMS]: Joi.object().keys({
-      role: Joi.string().required(),
-    }),
-  }),
-  getJobApplicationsByRole
-);
 
 router.use(errors());
 

@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const router = require('./src/routes/allroutes');
 const morgan = require('morgan');
 const cors = require('cors');
+const cookieParser = require('cookie-parser')
 require('dotenv').config();
+
 
 const app = express();
 const port = process.env.PORT || 7001;
@@ -35,7 +37,10 @@ mongoose
     process.exit(1); // Exit process if unable to connect
   });
 
-// Routes
+
+
+
+app.use(cookieParser());
 app.use(router);
 
 // Error-handling middleware

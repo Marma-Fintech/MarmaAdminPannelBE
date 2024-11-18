@@ -25,17 +25,8 @@ const upload = multer({
   },
 });
 
-
-// Custom error handling middleware for upload errors
-const handleUploadError = (err, res, next) => {
-  if (err && err.code === "LIMIT_FILE_SIZE") {
-    return res.status(400).json({ message: "File size should not exceed 24MB!" });
-  }
-  next(err);
-};
-
+// Export both `upload` and `cloudinary` to use in other files
 module.exports = {
   upload,
-  handleUploadError,
+  cloudinary,
 };
-
