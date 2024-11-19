@@ -11,7 +11,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_SECRET
 })
 
-const getAllEvents = async (req, res) => {
+const getAllEvents = async (req, res, next) => {
   try {
     const { timeFrame, page = 1 } = req.query
 
@@ -36,9 +36,8 @@ const getAllEvents = async (req, res) => {
       totalPages: Math.ceil(totalEvents / limit),
       events
     })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'Failed to fetch events' })
+  } catch (err) {
+    next(err)
   }
 }
 
