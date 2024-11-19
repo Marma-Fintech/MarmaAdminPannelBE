@@ -23,48 +23,40 @@ const signup = async (req, res) => {
 
     res.status(201).json({ message: 'Signup successful', employee })
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: 'Failed to signup',
-        error: error.message || 'Internal Server Error'
-      })
+   next(err)
   }
 }
 
 const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
     // Check if user exists
-    const employee = await Employee.findOne({ email })
+    const employee = await Employee.findOne({ email });
     if (!employee) {
-      return res.status(404).json({ message: 'User not found' })
+      return res.status(404).json({ message: 'User not found' });
     }
 
     // Validate password
-    const isPasswordValid = bcrypt.compare(password, employee.password)
+    const isPasswordValid =  bcrypt.compare(password, employee.password); // Await bcrypt.compare
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = await createToken({ id: user._id })
+    // Generate token
+    const token = await createToken({ id: employee._id }); // Use employee._id
 
-    // Set the userId in a cookie
-    res.cookie('id', employee._id.toString(), COOKIE_OPTIONS) // Use employee instead of user
-    res.cookie('token', token.toString(), COOKIE_OPTIONS)
+    // Set cookies
+    res.cookie('id', employee._id.toString(), COOKIE_OPTIONS); // Use employee._id
+    res.cookie('token', token.toString(), COOKIE_OPTIONS);
 
-    res.status(200).json({ message: 'Login successful', token })
-  } catch (error) {
-    console.error('Error during login:', error)
-    res
-      .status(500)
-      .json({
-        message: 'Failed to login',
-        error: error.message || 'Internal Server Error'
-      })
+    res.status(200).json({ message: 'Login successful', token });
+  } catch (err) {
+    console.error(err); // Log error for debugging
+    next(err); // Pass error to middleware
   }
-}
+};
+
 
 const signOut = async (req, res, next) => {
   try {
