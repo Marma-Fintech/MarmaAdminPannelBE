@@ -109,43 +109,30 @@ const forgotPassword = async (req, res) => {
 }
 
 const protect = async (req, res, next) => {
-  let token
+  let token;
+
   try {
-    // Check if the Authorization header contains a Bearer token
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
-      token = req.headers.authorization.split(' ')[1]
+      if (
+          req.headers.authorization &&
+          req.headers.authorization.startsWith('Bearer')
+      ) {
+          token = req.headers.authorization.split(' ')[1];
 
-      // Check if the token is blacklisted
-      if (await isTokenBlacklisted(token)) {
-        return res
-          .status(401)
-          .send({ message: 'Unauthorized - Token blacklisted' })
+          // Verify the token
+          try {
+              const decoded = await verifyToken(token); // This will handle invalid tokens gracefully
+              req.user = await Employee.findById(decoded.id).select('-password');
+              next(); // Pass control to the next middleware
+          } catch (error) {
+              return res.status(401).json({ message: error.message });
+          }
+      } else {
+          return res.status(401).json({ message: 'Unauthorized - No token provided' });
       }
-
-      // Verify the token
-      const decoded = verifyToken(token) // Use verifyToken function from jwt
-
-      // Check again after decoding if the token is blacklisted
-      if (await isTokenBlacklisted(token)) {
-        return res
-          .status(401)
-          .send({ message: 'Unauthorized - Token blacklisted' })
-      }
-
-      // Attach user to request object (excluding password)
-      req.user = await Employee.findById(decoded.id).select('-password')
-
-      next() // Pass control to the next middleware
-    }
   } catch (error) {
-    console.error('Error in protect middleware:', error.message)
-    return res
-      .status(401)
-      .send({ message: 'Unauthorized - Token verification failed' })
+      console.error('Unexpected error in protect middleware:', error.message);
+      return res.status(500).json({ message: 'Internal Server Error' });
   }
-}
+};
 
 module.exports = { signup, login, signOut, forgotPassword, protect }
