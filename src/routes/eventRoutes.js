@@ -5,10 +5,19 @@ const {
   eventLink,
 } = require("../controllers/eventController");
 const { celebrate, Joi, Segments,errors } = require("celebrate");
+const {protect} = require("../controllers/employeeController");
 const router = express.Router();
 
-
-router.get("/event/gettallevent", getAllEvents);
+router.get(
+  "/event/getallevent",
+  celebrate({
+    [Segments.QUERY]: Joi.object().keys({
+      timeFrame: Joi.string().valid('lastWeek', 'lastMonth').optional(),
+    }),
+  }),
+  protect,
+  getAllEvents
+);
 
 router.delete(
   "/event/:id",
@@ -17,6 +26,7 @@ router.delete(
       id: Joi.string().hex().length(24).required(), // Assuming MongoDB ObjectId format
     }),
   }),
+  protect,
   deleteEvent
 );
 
@@ -25,6 +35,7 @@ router.post("/eventLink", celebrate({
     link: Joi.string().uri().required()
   })
 }),
+protect,
 eventLink
 );
 

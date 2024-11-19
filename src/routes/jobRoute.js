@@ -6,6 +6,7 @@ const {
   deleteJob
 } = require('../controllers/jobController')
 const { celebrate, Joi, Segments, errors } = require('celebrate')
+const {protect} = require("../controllers/employeeController")
 const router = express.Router()
 
 router.post('/jobs',   celebrate({
@@ -15,7 +16,7 @@ router.post('/jobs',   celebrate({
     jobCategory: Joi.string().required(),
     jobType: Joi.string().required() // Accepts any string value
   })
-}), createJob)
+}),protect, createJob)
 
 router.get('/jobs/getalljobs', getAllJobs)
 
