@@ -12,10 +12,11 @@ router.get(
   "/event/getallevent",
   celebrate({
     [Segments.QUERY]: Joi.object().keys({
-      timeFrame: Joi.string().valid('lastWeek', 'lastMonth').optional(),
+      timeFrame: Joi.string().valid('Last week', 'One month').optional(),
+      page: Joi.number().integer().min(1).optional(), // Validate page number
     }),
   }),
-  protect,
+  // protect,
   getAllEvents
 );
 

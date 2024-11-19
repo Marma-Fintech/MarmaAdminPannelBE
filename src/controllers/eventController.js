@@ -1,22 +1,44 @@
-const Event = require('../models/eventModel');
-const axios = require('axios');
-const cheerio = require('cheerio');
-const cloudinary = require('cloudinary').v2;  // Import Cloudinary directly
-require("dotenv").config();
+const Event = require('../models/eventModel')
+const axios = require('axios')
+const cheerio = require('cheerio')
+const cloudinary = require('cloudinary').v2 // Import Cloudinary directly
+require('dotenv').config()
 
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUDINARY_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET,
-});
+  api_secret: process.env.CLOUDINARY_SECRET
+})
 
-const getAllEvents = async (req, res, next) => {
+const getAllEvents = async (req, res) => {
   try {
-    const events = await Event.find() // Retrieves all events from the database
-    res.status(200).json(events)
-  } catch (err) {
-    next(err) // Pass the error to the error handling middleware
+    const { timeFrame, page = 1 } = req.query
+
+    // Set default limit
+    const limit = 50
+    let filter = {}
+    if (timeFrame === 'Last week') {
+      const oneWeekAgo = new Date()
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+      filter = { createdAt: { $gte: oneWeekAgo } }
+    }
+    const skip = (page - 1) * limit
+    const events = await Event.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+    // Get the total count of events for the given filter
+    const totalEvents = await Event.countDocuments(filter)
+    res.status(200).json({
+      totalEvents,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalEvents / limit),
+      events
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Failed to fetch events' })
   }
 }
 
@@ -39,50 +61,57 @@ const deleteEvent = async (req, res, next) => {
 }
 
 const eventLink = async (req, res, next) => {
-  const { link } = req.body;
+  const { link } = req.body
 
   if (!link) {
-    return res.status(400).json({ error: 'link is required' });
+    return res.status(400).json({ error: 'link is required' })
   }
 
   try {
     // Check if the link already exists in the Event collection
-    const existingEvent = await Event.findOne({ link });
+    const existingEvent = await Event.findOne({ link })
 
     if (existingEvent) {
-      return res.status(400).json({ error: 'Event with this link already exists' });
+      return res
+        .status(400)
+        .json({ error: 'Event with this link already exists' })
     }
 
     // Fetch the HTML content of the link
-    const response = await axios.get(link);
-    const html = response.data;
+    const response = await axios.get(link)
+    const html = response.data
 
     // Load the HTML into cheerio
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(html)
 
     // Extract metadata
-    const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'No title';
-    let description = $('meta[property="og:description"]').attr('content') ||
-                      $('meta[name="description"]').attr('content') ||
-                      $('meta[property="twitter:description"]').attr('content') ||
-                      'No description';
-                      
+    const title =
+      $('meta[property="og:title"]').attr('content') ||
+      $('title').text() ||
+      'No title'
+    let description =
+      $('meta[property="og:description"]').attr('content') ||
+      $('meta[name="description"]').attr('content') ||
+      $('meta[property="twitter:description"]').attr('content') ||
+      'No description'
+
     // If description is still too short or missing, extract more text from the body
-    if (description.length < 100) { // You can adjust the length threshold
-      description = $('body').text().slice(0, 1000).trim(); // Extract more text, up to 1000 characters
+    if (description.length < 100) {
+      // You can adjust the length threshold
+      description = $('body').text().slice(0, 1000).trim() // Extract more text, up to 1000 characters
     }
 
-    const image = $('meta[property="og:image"]').attr('content') || null;
+    const image = $('meta[property="og:image"]').attr('content') || null
 
-    let cloudinaryImageUrl = null;
+    let cloudinaryImageUrl = null
 
     // Upload image to Cloudinary if an image URL exists
     if (image) {
       const uploadResponse = await cloudinary.uploader.upload(image, {
-        folder: "marmaAdminPanel",
-        resource_type: "image",
-      });
-      cloudinaryImageUrl = uploadResponse.secure_url;
+        folder: 'marmaAdminPanel',
+        resource_type: 'image'
+      })
+      cloudinaryImageUrl = uploadResponse.secure_url
     }
 
     // Save data to MongoDB
@@ -91,15 +120,15 @@ const eventLink = async (req, res, next) => {
       description,
       image: cloudinaryImageUrl || '',
       link: link
-    });
-    await newEvent.save();
+    })
+    await newEvent.save()
 
     // Send response with saved data
-    res.status(201).json(newEvent);
+    res.status(201).json(newEvent)
   } catch (err) {
     next(err)
   }
-};
+}
 
 module.exports = {
   deleteEvent,

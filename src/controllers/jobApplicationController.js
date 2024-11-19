@@ -87,7 +87,7 @@ const getAllJobApplications = async (req, res, next) => {
     const { page = 1, sort = 'asc', applyingDesignation } = req.query;
 
     // Set default limit
-    const limit = 2;
+    const limit = 50;
 
     // Parse the page number
     const pageNumber = parseInt(page, 10) || 1;

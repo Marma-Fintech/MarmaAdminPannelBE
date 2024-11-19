@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
-
+const { v4: uuidv4 } = require('uuid'); // Import UUID package
 const jobApplicationSchema = new mongoose.Schema(
   {
     resume: {
       type: String,
       required: true,
-    }, 
+    },
     name: {
       type: String,
       required: true,
@@ -38,11 +38,16 @@ const jobApplicationSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    uuid: {
+      type: String,
+      required: true,
+      unique: true, // Ensures UUID is unique
+      default: () => uuidv4().slice(0, 4) // Generate UUID and slice it to 4 characters
+    },
   },
   {
     timestamps: true,
   }
 );
-
 module.exports = mongoose.model("JobApplication", jobApplicationSchema);
 
