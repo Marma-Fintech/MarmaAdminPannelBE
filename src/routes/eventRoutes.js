@@ -16,7 +16,6 @@ router.get(
       page: Joi.number().integer().min(1).optional(), // Validate page number
     }),
   }),
-  protect,
   getAllEvents
 );
 
