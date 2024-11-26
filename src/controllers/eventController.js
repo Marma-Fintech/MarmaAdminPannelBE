@@ -63,7 +63,7 @@ const eventLink = async (req, res, next) => {
   const { link } = req.body;
 
   if (!link) {
-    return res.status(400).json({ error: 'link is required' });
+    return res.status(400).json({ error: 'Link is required' });
   }
 
   try {
@@ -81,32 +81,36 @@ const eventLink = async (req, res, next) => {
     const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'No title';
     let description = $('meta[property="og:description"]').attr('content') ||
                       $('meta[name="description"]').attr('content') ||
-                      $('meta[property="twitter:description"]').attr('content') || 'No description';
+                      'No description';
 
     if (description.length < 100) {
       description = $('body').text().slice(0, 1000).trim();
     }
 
-    const image = $('meta[property="og:image"]').attr('content') || 'https://example.com/default-image.jpg';
+    const image = $('meta[property="og:image"]').attr('content') || null;
+    console.log('Extracted image URL:', image);
 
     let cloudinaryImageUrl = null;
 
-    if (image && image !== 'https://example.com/default-image.jpg') {
+    if (image) {
       try {
         const uploadResponse = await cloudinary.uploader.upload(image, {
           folder: 'marmaAdminPanel',
           resource_type: 'image'
         });
         cloudinaryImageUrl = uploadResponse.secure_url;
-      } catch (cloudinaryError) {
-        console.error('Cloudinary upload failed:', cloudinaryError);
+        console.log('Uploaded image URL:', cloudinaryImageUrl);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
       }
+    } else {
+      console.warn('No image found for the given link.');
     }
 
     const newEvent = new Event({
       title,
       description,
-      image: cloudinaryImageUrl || image,
+      image: cloudinaryImageUrl || '', // Default as fallback
       link: link
     });
 
@@ -117,6 +121,7 @@ const eventLink = async (req, res, next) => {
     next(err);
   }
 };
+
 
 
 module.exports = {
