@@ -1,6 +1,5 @@
 const Event = require('../models/eventModel')
-const axios = require('axios')
-const cheerio = require('cheerio')
+const puppeteer = require('puppeteer');
 const cloudinary = require('cloudinary').v2 // Import Cloudinary directly
 require('dotenv').config()
 
@@ -59,6 +58,49 @@ const deleteEvent = async (req, res, next) => {
   }
 }
 
+// Function to fetch metadata using Puppeteer
+const fetchMetadataWithPuppeteer = async (link) => {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for AWS EC2
+    headless: true,
+  });
+  const page = await browser.newPage();
+
+  try {
+    await page.goto(link, { waitUntil: 'domcontentloaded' });
+
+    const metadata = await page.evaluate(() => {
+      const getMeta = (name) => document.querySelector(`meta[property="${name}"]`)?.content || null;
+
+      const title = getMeta('og:title') || document.title || 'No title';
+      const ogDescription = getMeta('og:description') || null;
+      const metaDescription = document.querySelector('meta[name="description"]')?.content || null;
+      const bodyText = document.body.innerText || '';
+
+      // Combine descriptions
+      let description = ogDescription || metaDescription || '';
+      if (description.length < 100) {
+        // If the meta description is too short, add body text
+        description = `${description}\n${bodyText.slice(0, 1000)}`.trim();
+      }
+
+      // Ensure the description is within a sensible length
+      if (description.length > 1000) {
+        description = description.slice(0, 1000) + '...'; // Truncate if too long
+      }
+
+      const image = getMeta('og:image') || null;
+
+      return { title, description, image };
+    });
+
+    return metadata;
+  } finally {
+    await browser.close();
+  }
+};
+
+
 const eventLink = async (req, res, next) => {
   const { link } = req.body;
 
@@ -67,60 +109,46 @@ const eventLink = async (req, res, next) => {
   }
 
   try {
+    // Check if the event already exists
     const existingEvent = await Event.findOne({ link });
-
     if (existingEvent) {
       return res.status(400).json({ error: 'Event with this link already exists' });
     }
 
-    const response = await axios.get(link);
-    const html = response.data;
-
-    const $ = cheerio.load(html);
-
-    const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'No title';
-    let description = $('meta[property="og:description"]').attr('content') ||
-                      $('meta[name="description"]').attr('content') ||
-                      'No description';
-
-    if (description.length < 100) {
-      description = $('body').text().slice(0, 1000).trim();
-    }
-
-    const image = $('meta[property="og:image"]').attr('content') || null;
-    console.log('Extracted image URL:', image);
+    // Fetch metadata using Puppeteer
+    const { title, description, image } = await fetchMetadataWithPuppeteer(link);
 
     let cloudinaryImageUrl = null;
 
+    // Upload image to Cloudinary if an image URL exists
     if (image) {
       try {
         const uploadResponse = await cloudinary.uploader.upload(image, {
           folder: 'marmaAdminPanel',
-          resource_type: 'image'
+          resource_type: 'image',
         });
         cloudinaryImageUrl = uploadResponse.secure_url;
-        console.log('Uploaded image URL:', cloudinaryImageUrl);
       } catch (uploadError) {
         console.error('Cloudinary upload error:', uploadError);
       }
-    } else {
-      console.warn('No image found for the given link.');
     }
 
+    // Save new event to MongoDB
     const newEvent = new Event({
       title,
       description,
-      image: cloudinaryImageUrl || '', // Default as fallback
-      link: link
+      image: cloudinaryImageUrl || '',
+      link: link,
     });
-
     await newEvent.save();
 
     res.status(201).json(newEvent);
   } catch (err) {
+    console.error('Error in eventLink:', err);
     next(err);
   }
 };
+
 
 
 
