@@ -58,14 +58,15 @@ const deleteEvent = async (req, res, next) => {
   }
 }
 
-// Function to fetch metadata using Puppeteer
 const fetchMetadataWithPuppeteer = async (link) => {
-  const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
-  const page = await browser.newPage();
-
+  let browser;
   try {
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'], // Add necessary args for restrictive environments
+      headless: true, // Ensure headless mode is enabled for production
+    });
+
+    const page = await browser.newPage();
     await page.goto(link, { waitUntil: 'domcontentloaded' });
 
     const metadata = await page.evaluate(() => {
@@ -94,11 +95,13 @@ const fetchMetadataWithPuppeteer = async (link) => {
     });
 
     return metadata;
+  } catch (error) {
+    console.error('Error in fetchMetadataWithPuppeteer:', error);
+    throw new Error('Failed to fetch metadata. Please try again later.');
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
   }
 };
-
 
 const eventLink = async (req, res, next) => {
   const { link } = req.body;
@@ -144,7 +147,10 @@ const eventLink = async (req, res, next) => {
     res.status(201).json(newEvent);
   } catch (err) {
     console.error('Error in eventLink:', err);
-    next(err);
+    res.status(500).json({
+      message: 'An error occurred',
+      error: err.message,
+    });
   }
 };
 
