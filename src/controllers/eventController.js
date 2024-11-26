@@ -60,74 +60,64 @@ const deleteEvent = async (req, res, next) => {
 }
 
 const eventLink = async (req, res, next) => {
-  const { link } = req.body
+  const { link } = req.body;
 
   if (!link) {
-    return res.status(400).json({ error: 'link is required' })
+    return res.status(400).json({ error: 'link is required' });
   }
 
   try {
-    // Check if the link already exists in the Event collection
-    const existingEvent = await Event.findOne({ link })
+    const existingEvent = await Event.findOne({ link });
 
     if (existingEvent) {
-      return res
-        .status(400)
-        .json({ error: 'Event with this link already exists' })
+      return res.status(400).json({ error: 'Event with this link already exists' });
     }
 
-    // Fetch the HTML content of the link
-    const response = await axios.get(link)
-    const html = response.data
+    const response = await axios.get(link);
+    const html = response.data;
 
-    // Load the HTML into cheerio
-    const $ = cheerio.load(html)
+    const $ = cheerio.load(html);
 
-    // Extract metadata
-    const title =
-      $('meta[property="og:title"]').attr('content') ||
-      $('title').text() ||
-      'No title'
-    let description =
-      $('meta[property="og:description"]').attr('content') ||
-      $('meta[name="description"]').attr('content') ||
-      $('meta[property="twitter:description"]').attr('content') ||
-      'No description'
+    const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'No title';
+    let description = $('meta[property="og:description"]').attr('content') ||
+                      $('meta[name="description"]').attr('content') ||
+                      $('meta[property="twitter:description"]').attr('content') || 'No description';
 
-    // If description is still too short or missing, extract more text from the body
     if (description.length < 100) {
-      // You can adjust the length threshold
-      description = $('body').text().slice(0, 1000).trim() // Extract more text, up to 1000 characters
+      description = $('body').text().slice(0, 1000).trim();
     }
 
-    const image = $('meta[property="og:image"]').attr('content') || null
+    const image = $('meta[property="og:image"]').attr('content') || 'https://example.com/default-image.jpg';
 
-    let cloudinaryImageUrl = null
+    let cloudinaryImageUrl = null;
 
-    // Upload image to Cloudinary if an image URL exists
-    if (image) {
-      const uploadResponse = await cloudinary.uploader.upload(image, {
-        folder: 'marmaAdminPanel',
-        resource_type: 'image'
-      })
-      cloudinaryImageUrl = uploadResponse.secure_url
+    if (image && image !== 'https://example.com/default-image.jpg') {
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(image, {
+          folder: 'marmaAdminPanel',
+          resource_type: 'image'
+        });
+        cloudinaryImageUrl = uploadResponse.secure_url;
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload failed:', cloudinaryError);
+      }
     }
 
-    // Save data to MongoDB
     const newEvent = new Event({
       title,
       description,
-      image: cloudinaryImageUrl || '',
+      image: cloudinaryImageUrl || image,
       link: link
-    })
-    await newEvent.save()
+    });
 
-    // Send response with saved data
-    res.status(201).json(newEvent)
+    await newEvent.save();
+
+    res.status(201).json(newEvent);
   } catch (err) {
-    next(err)
+    next(err);
   }
-}
+};
+
 
 module.exports = {
   deleteEvent,

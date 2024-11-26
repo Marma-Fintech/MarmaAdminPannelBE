@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid'); // Import UUID package
+const mongoose = require('mongoose')
+const { v4: uuidv4 } = require('uuid') // Import UUID package
 
 const eventSchema = new mongoose.Schema(
   {
@@ -7,9 +7,10 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true
     },
-    image: {
-      type: String, // Store path to uploaded file
-      required: true
+    image: { 
+      type: String, 
+      required: false, 
+      default: '' 
     },
     link: {
       type: String,
@@ -24,11 +25,11 @@ const eventSchema = new mongoose.Schema(
       required: true,
       unique: true, // Ensures UUID is unique
       default: () => uuidv4().slice(0, 4) // Generate UUID and slice it to 4 characters
-    },
+    }
   },
   {
     timestamps: true
   }
-);
+)
 
-module.exports = mongoose.model('Event', eventSchema);
+module.exports = mongoose.model('Event', eventSchema)
