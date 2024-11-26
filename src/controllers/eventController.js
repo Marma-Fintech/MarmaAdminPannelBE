@@ -70,7 +70,7 @@ const eventLink = async (req, res, next) => {
     const existingEvent = await Event.findOne({ link });
 
     if (existingEvent) {
-      return res.status(400).json({ error: 'Event with this link already exists' });
+      return res.status(400).json({ error: 'Event with this link already exists..' });
     }
 
     const response = await axios.get(link);
