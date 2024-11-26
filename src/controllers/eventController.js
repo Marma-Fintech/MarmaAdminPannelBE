@@ -61,8 +61,7 @@ const deleteEvent = async (req, res, next) => {
 // Function to fetch metadata using Puppeteer
 const fetchMetadataWithPuppeteer = async (link) => {
   const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required for AWS EC2
-    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
   const page = await browser.newPage();
 
