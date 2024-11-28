@@ -17,7 +17,8 @@ router.post(
       applyingDesignation: Joi.string().required(),
       email: Joi.string().email().required(),
       experience: Joi.string().required(),
-      noticeperiod: Joi.string().required(),
+      department: Joi.string().required(),
+      noticeperiod: Joi.string().required(),  
       currentsalary: Joi.number().required(),
       expectedsalary: Joi.number().required(),
       Portfoliolink: Joi.string().uri().optional()

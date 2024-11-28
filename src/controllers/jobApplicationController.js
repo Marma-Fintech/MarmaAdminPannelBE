@@ -11,6 +11,7 @@ const applyForJob = async (req, res, next) => {
       experience,
       noticeperiod,
       currentsalary,
+      department,
       expectedsalary,
       Portfoliolink
     } = req.body
@@ -62,7 +63,7 @@ const applyForJob = async (req, res, next) => {
       to: process.env.ADMIN_EMAIL, // Admin email as the recipient
       replyTo: email, // Ensures replies go directly to the user's email
       subject: `New Job Application - ${applyingDesignation}`,
-      text: `A new application has been received:\n\nName: ${name}\nEmail: ${email}\nApplying for: ${applyingDesignation}\nExperience: ${experience}\nNotice Period: ${noticeperiod}\nCurrent Salary: ${currentsalary}\nExpected Salary: ${expectedsalary}\nPortfolio Link: ${
+      text: `A new application has been received:\n\nName: ${name}\nEmail: ${email}\nApplying for: ${applyingDesignation}\nDepartment: ${department}\nExperience: ${experience}\nNotice Period: ${noticeperiod}\nCurrent Salary: ${currentsalary}\nExpected Salary: ${expectedsalary}\nPortfolio Link: ${
         Portfoliolink || ''
       }\nResume Link: ${
         jobApplication.resume
