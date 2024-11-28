@@ -60,74 +60,107 @@ const deleteEvent = async (req, res, next) => {
 }
 
 const eventLink = async (req, res, next) => {
-  const { link } = req.body;
-
+  const { link, eventDate } = req.body
   if (!link) {
-    return res.status(400).json({ error: 'Link is required' });
+    return res.status(400).json({ error: 'Link is required' })
   }
 
+  if (!eventDate) {
+    return res.status(400).json({ error: 'Event date is required' })
+  }
+  const parsedDate = new Date(eventDate)
+  if (isNaN(parsedDate.getTime())) {
+    return res
+      .status(400)
+      .json({ error: 'Invalid event date format. Use YYYY-MM-DD.' })
+  }
   try {
-    // Check if event with the link already exists
-    const existingEvent = await Event.findOne({ link });
-
+    const existingEvent = await Event.findOne({ link })
     if (existingEvent) {
-      return res.status(400).json({ error: 'Event with this link already exists.' });
+      return res
+        .status(400)
+        .json({ error: 'Event with this link already exists.' })
     }
-
-    // Attempt to fetch the page using the link provided
-    const response = await axios.get(link);
-    const html = response.data;
-
-    // Parse the HTML using cheerio
-    const $ = cheerio.load(html);
-
-    // Extract title, description, and image
-    const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'No title';
-    
-    // Extract description from meta tags, if available
-    let description = $('meta[property="og:description"]').attr('content') ||
-                      $('meta[name="description"]').attr('content') ||
-                      'No description';
-
-   
-
-    const image = $('meta[property="og:image"]').attr('content') || null;
-
-    let cloudinaryImageUrl = null;
-
-    // If an image exists, upload it to Cloudinary
+    const response = await axios.get(link)
+    const html = response.data
+    const $ = cheerio.load(html)
+    const title =
+      $('meta[property="og:title"]').attr('content') ||
+      $('title').text() ||
+      'No title'
+    //Extract description from meta tags, if available
+    let description =
+      $('meta[property="og:description"]').attr('content') ||
+      $('meta[name="description"]').attr('content') ||
+      'No description'
+    const image = $('meta[property="og:image"]').attr('content') || null
+    let cloudinaryImageUrl = null
     if (image) {
       try {
         const uploadResponse = await cloudinary.uploader.upload(image, {
           folder: 'marmaAdminPanel',
           resource_type: 'image'
-        });
-        cloudinaryImageUrl = uploadResponse.secure_url;
+        })
+        cloudinaryImageUrl = uploadResponse.secure_url
       } catch (uploadError) {
-        console.error('Error uploading image to Cloudinary:', uploadError); // Log error
-        return res.status(500).json({ error: 'Error uploading image to Cloudinary.' });
+        console.error('Cloudinary upload error:', uploadError)
       }
     }
-
-    // Create a new event object and save it
     const newEvent = new Event({
       title,
       description,
-      image: cloudinaryImageUrl || '', // Default as fallback
-      link: link
-    });
-
-    await newEvent.save();
-
-    res.status(201).json(newEvent);
+      image: cloudinaryImageUrl || '',
+      link,
+      eventDate: parsedDate
+    })
+    await newEvent.save()
+    // Format the eventDate to 'YYYY-MM-DD' before sending the response
+    const formattedEvent = {
+      ...newEvent._doc, // Spread the event document to a plain object
+      eventDate: newEvent.eventDate.toISOString().split('T')[0] // Format eventDate to 'YYYY-MM-DD'
+    }
+    res.status(201).json(formattedEvent)
   } catch (err) {
-    console.error('Error in eventLink function:', err); // Log error
-    next(err); // Pass the error to the next middleware
+    next(err)
   }
-};
+}
+
+const getPaginatedUpcomingEvents = async (req, res, next) => {
+  try {
+    const { page = 1 } = req.query
+    // Convert the page query parameter to a number
+    const pageNumber = Number(page)
+    if (isNaN(pageNumber) || pageNumber < 1) {
+      return res.status(400).json({ error: 'Invalid page number' })
+    }
+    const limit = 2 // Number of events per page
+    const skip = (pageNumber - 1) * limit
+    // Get today's date and set the time to 00:00:00 for comparison
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    // Fetch events with eventDate >= today
+    const upcomingEvents = await Event.find({ eventDate: { $gte: today } })
+      .sort({ eventDate: 1 }) // Sort by eventDate in ascending order
+      .skip(skip)
+      .limit(limit)
+    // Get total count of upcoming events
+    const totalEvents = await Event.countDocuments({
+      eventDate: { $gte: today }
+    })
+    res.status(200).json({
+      totalEvents,
+      currentPage: pageNumber,
+      totalPages: Math.ceil(totalEvents / limit),
+      events: upcomingEvents
+    })
+  } catch (err) {
+    next(err)
+  }
+}
 
 module.exports = {
   deleteEvent,
   getAllEvents,
-  eventLink
+  eventLink,
+  getPaginatedUpcomingEvents
 }

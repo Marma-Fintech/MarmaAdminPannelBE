@@ -20,6 +20,10 @@ const eventSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    eventDate: {
+      type: Date,
+      required: true,
+    },
     uuid: {
       type: String,
       required: true,
