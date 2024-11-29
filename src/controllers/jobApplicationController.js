@@ -85,32 +85,25 @@ const applyForJob = async (req, res, next) => {
 
 const getAllJobApplications = async (req, res, next) => {
   try {
-    const { page = 1, sort = 'asc', applyingDesignation } = req.query;
-
+    const { page = 1, sort = 'asc', department } = req.query;
     // Set default limit
     const limit = 50;
-
     // Parse the page number
     const pageNumber = parseInt(page, 10) || 1;
-
     // Build the query object for filtering
     const query = {};
-    if (applyingDesignation) {
-      query.applyingDesignation = new RegExp(`^${applyingDesignation.trim()}`, 'i'); // Case-insensitive match, trims spaces
+    if (department) {
+      query.department = new RegExp(`^${department.trim()}`, 'i'); // Case-insensitive match, trims spaces
     }
-
     // Determine sorting order
     const sortOrder = sort.toLowerCase() === 'desc' ? -1 : 1;
-
     // Fetch filtered, sorted, and paginated data
     const applications = await JobApplication.find(query)
       .sort({ createdAt: sortOrder }) // Adjust 'createdAt' field for sorting
       .skip((pageNumber - 1) * limit)
       .limit(limit);
-
     // Get the total count of applications for pagination metadata
     const totalApplications = await JobApplication.countDocuments(query);
-
     res.status(200).json({
       totalApplications,
       currentPage: pageNumber,
@@ -121,6 +114,7 @@ const getAllJobApplications = async (req, res, next) => {
     next(error);
   }
 };
+
 module.exports = {
   applyForJob,
   getAllJobApplications,

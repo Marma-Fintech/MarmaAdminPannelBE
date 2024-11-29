@@ -30,54 +30,27 @@ const signup = async (req, res) => {
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     // Check if user exists
     const employee = await Employee.findOne({ email });
     if (!employee) {
       return res.status(404).json({ message: 'User not found' });
     }
-
     // Validate password
-    const isPasswordValid =  bcrypt.compare(password, employee.password); // Await bcrypt.compare
+    const isPasswordValid = await bcrypt.compare(password, employee.password); // Await bcrypt.compare
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-
     // Generate token
     const token = await createToken({ id: employee._id }); // Use employee._id
-
     // Set cookies
     res.cookie('id', employee._id.toString(), COOKIE_OPTIONS); // Use employee._id
     res.cookie('token', token.toString(), COOKIE_OPTIONS);
-
     res.status(200).json({ message: 'Login successful', token });
   } catch (err) {
     console.error(err); // Log error for debugging
     next(err); // Pass error to middleware
   }
 };
-
-
-const signOut = async (req, res, next) => {
-  try {
-    const token = req.cookies.token
-
-    // Check if the token is already blacklisted
-    if (await isTokenBlacklisted(token)) {
-      res.status(401).send({ message: 'Token is already blacklisted' })
-      return
-    }
-
-    // Add the token to the blacklist
-    await addToBlacklist(token)
-    res.clearCookie('id')
-    res.clearCookie('token')
-
-    res.status(201).send({ message: 'User logged out successfully' })
-  } catch (err) {
-    next(err)
-  }
-}
 
 const forgotPassword = async (req, res) => {
   try {
@@ -108,31 +81,59 @@ const forgotPassword = async (req, res) => {
   }
 }
 
-const protect = async (req, res, next) => {
-  let token;
-
+const signOut = async (req, res, next) => {
   try {
+      const token = req.cookies.token;
+
+      if (!token) {
+          return res.status(400).send({ message: 'No token provided' });
+      }
+
+      // Check if the token is already blacklisted
+      if (await isTokenBlacklisted(token)) {
+          return res.status(401).send({ message: 'Token is already blacklisted' });
+      }
+
+      // Add the token to the blacklist
+      await addToBlacklist(token);
+
+      // Clear the token from cookies
+      res.clearCookie('id');
+      res.clearCookie('token');
+
+      return res.status(200).send({ message: 'User logged out successfully' });
+  } catch (err) {
+      next(err);
+  }
+};
+
+const protect = async (req, res, next) => {
+  try {
+      let token;
+
       if (
           req.headers.authorization &&
           req.headers.authorization.startsWith('Bearer')
       ) {
           token = req.headers.authorization.split(' ')[1];
 
-          // Verify the token
-          try {
-              const decoded = await verifyToken(token); // This will handle invalid tokens gracefully
-              req.user = await Employee.findById(decoded.id).select('-password');
-              next(); // Pass control to the next middleware
-          } catch (error) {
-              return res.status(401).json({ message: error.message });
+          // Check if the token is blacklisted
+          if (await isTokenBlacklisted(token)) {
+              return res.status(401).json({ message: 'Token is blacklisted' });
           }
+
+          // Verify the token
+          const decoded = await verifyToken(token);
+          req.user = await Employee.findById(decoded.id).select('-password');
+          next();
       } else {
           return res.status(401).json({ message: 'Unauthorized - No token provided' });
       }
   } catch (error) {
       console.error('Unexpected error in protect middleware:', error.message);
-      return res.status(500).json({ message: 'Internal Server Error' });
+      return res.status(500).json({ message: 'Invaild token' });
   }
 };
+
 
 module.exports = { signup, login, signOut, forgotPassword, protect }
