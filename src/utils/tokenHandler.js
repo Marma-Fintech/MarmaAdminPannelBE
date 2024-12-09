@@ -5,7 +5,6 @@ const addToBlacklist = async (token) => {
 };
 
 const isTokenBlacklisted = async (token) => {
-    console.log("token", token);
     return blacklistedTokens.has(token);
 };
 
