@@ -53,7 +53,7 @@ const applyForJob = async (req, res, next) => {
     const userMailOptions = {
       from: process.env.ADMIN_EMAIL,
       to: email,
-      subject: 'Thank You for Applying',
+      subject: 'Thank You for Your Application!',
       text: `Hi ${name},\n\nThank you for applying for the position of ${applyingDesignation}. We’ve received your application and will be in touch if your profile aligns with our requirements.\n\nBest Regards,\nMARMA FINTECH Team`
     }
 
