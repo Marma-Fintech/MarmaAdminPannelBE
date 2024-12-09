@@ -14,18 +14,23 @@ cloudinary.config({
 const getAllEvents = async (req, res, next) => {
   try {
     const { timeFrame, page = 1 } = req.query
-
     // Set default limit
     const limit = 50
+    const currentDate = new Date(); // Make sure this line is added
     let filter = {}
     if (timeFrame === 'Last week') {
       const oneWeekAgo = new Date()
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-      filter = { createdAt: { $gte: oneWeekAgo } }
+      filter = { eventDate: { $gte: oneWeekAgo, $lt: currentDate } }
+    }else if (timeFrame === 'One month') {
+      // Events from the last 30 days
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setDate(currentDate.getDate() - 30);
+      filter = { eventDate: { $gte: oneMonthAgo, $lt: currentDate } };
     }
     const skip = (page - 1) * limit
     const events = await Event.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ eventDate: -1 })
       .skip(skip)
       .limit(Number(limit))
     // Get the total count of events for the given filter
@@ -41,7 +46,6 @@ const getAllEvents = async (req, res, next) => {
   }
 }
 
-// Function to delete a specific event by ID
 const deleteEvent = async (req, res, next) => {
   try {
     const eventId = req.params.id
