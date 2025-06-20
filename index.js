@@ -30,7 +30,7 @@ mongoose
     serverSelectionTimeoutMS: 5000,
   })
   .then(() => {
-    console.log('Successfully Connected to MongoDB to live');
+    console.log('Successfully Connected to MongoDB to live prod');
   })
   .catch((err) => {
     console.error('MongoDB Connection Failure', err);

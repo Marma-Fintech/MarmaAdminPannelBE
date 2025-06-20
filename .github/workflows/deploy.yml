@@ -21,6 +21,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}             # Private key stored in GitHub Secrets
           script: |
             cd /home/ubuntu/MarmaAdmin_BE
-            git pull origin dev
+            git pull origin main
             npm install
             pm2 restart all
